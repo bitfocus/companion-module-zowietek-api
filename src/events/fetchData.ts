@@ -9,11 +9,12 @@ export async function fetchData(instance: ZowietekInstance): Promise<void> {
 		return;
 	}
 
-	const [getOutputInfo, getAudioConfig, getDeviceTime, getTally] = await Promise.all([
+	const [getOutputInfo, getAudioConfig, getDeviceTime, getTally, getRecordingStatus] = await Promise.all([
 		instance.api.getOutputInfo(),
 		instance.api.getAudioConfig(),
 		instance.api.getDeviceTime(),
 		instance.api.getTallyParameters(),
+		instance.api.getRecordingTaskList(),
 	]);
 
     //Fetch Output Info
@@ -64,5 +65,15 @@ export async function fetchData(instance: ZowietekInstance): Promise<void> {
 		instance.checkFeedbacks(FeedbackId.getTally);
 	} else {
 		ConsoleLog(instance, `Failed to get Tally: ${getZowieStatusLabel(getTally.status)}`, LogLevel.ERROR);
+	}
+
+	//Fetch Recording Status
+	if (getRecordingStatus.status === ZowieStatus.Successful || getRecordingStatus.status === ZowieStatus.ModificationSuccessful) {
+		//ConsoleLog(instance, `Feedback Recording Status: ${JSON.stringify(getRecordingStatus.data)}`, LogLevel.DEBUG);
+		instance.constants.recordingTasks = getRecordingStatus.data;
+		//ConsoleLog(instance, `Recording Tasks updated: ${JSON.stringify(instance.constants.recordingTasks)}`, LogLevel.DEBUG);
+		instance.checkFeedbacks(FeedbackId.getRecordingStatus);
+	} else {
+		ConsoleLog(instance, `Failed to get Recording Status: ${getZowieStatusLabel(getRecordingStatus.status)}`, LogLevel.ERROR);
 	}
 }
