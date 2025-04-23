@@ -65,4 +65,19 @@ export async function fetchData(instance: ZowietekInstance): Promise<void> {
 	} else {
 		ConsoleLog(instance, `Failed to get Tally: ${getZowieStatusLabel(getTally.status)}`, LogLevel.ERROR);
 	}
+	    //Fetch Recording Status
+    try {
+        const recordingTasksResponse = await instance.api.getRecordingTaskList();
+        if (
+            recordingTasksResponse.status === ZowieStatus.Successful ||
+            recordingTasksResponse.status === ZowieStatus.ModificationSuccessful
+        ) {
+            instance.constants.recordingTasks = recordingTasksResponse.data;
+            instance.checkFeedbacks(FeedbackId.getRecordingStatus);
+        } else {
+            ConsoleLog(instance, `Failed to get Recording Tasks: ${getZowieStatusLabel(recordingTasksResponse.status)}`, LogLevel.ERROR);
+        }
+    } catch (error) {
+        ConsoleLog(instance, `Error fetching Recording Tasks: ${error}`, LogLevel.ERROR);
+    }
 }

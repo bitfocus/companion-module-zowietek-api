@@ -23,7 +23,8 @@ export enum FeedbackId {
 	getOutputInfo = 'getOutputInfo',
 	getAudioConfig = 'getAudioConfig',
 	getDeviceTime = 'getDeviceTime',
-	getTally = 'getTally'
+	getTally = 'getTally',
+	getRecordingStatus = 'getRecordingStatus'
 }
 
 export function UpdateFeedbacks(instance: ZowietekInstance): void {
@@ -380,6 +381,68 @@ export function UpdateFeedbacks(instance: ZowietekInstance): void {
 				} else {
 					return false
 				}
+			}
+		},
+		[FeedbackId.getRecordingStatus]: {
+			name: 'Recording Status',
+			type: 'boolean',
+			description: 'Feedback based on the status of a recording task.',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(255, 0, 0)
+			},
+			showInvert: true,
+			options: [
+				{
+					id: 'recording_status',
+					type: 'dropdown',
+					label: 'Recording Status',
+					choices: [
+						{ id: '0', label: 'Not Recording' },
+						{ id: '1', label: 'Recording' },
+						{ id: '2', label: 'Recording Paused' },
+						{ id: '3', label: 'The storage device is full and cannot record' },
+						{ id: '4', label: 'Storage device is invalid/not mounted' },
+						{ id: '5', label: 'No signal source' }
+					],
+					default: '0'
+				}
+			],
+			learn: async (feedback, context) => {
+				const request = await instance.api.getRecordingTaskList()
+				if (
+					request.status === ZowieStatus.Successful ||
+					request.status === ZowieStatus.ModificationSuccessful
+				) {
+					ConsoleLog(instance, `Learn Recording Tasks: ${JSON.stringify(request.data)}`, LogLevel.DEBUG)
+					// Save tasks list so that callback can later verify the status.
+					instance.constants.recordingTasks = request.data
+					// Update the dropdown choices for tasks:
+					const taskChoices = request.data.map((t: any) => ({ id: t.index, label: t.name }))
+					return {
+						...feedback.options,
+						task_index: taskChoices.length > 0 ? taskChoices[0].id : ''
+						// Note: Some companion modules allow dynamically updating choices.
+					}
+				} else {
+					ConsoleLog(instance, `Failed to learn Recording Tasks: ${getZowieStatusLabel(request.status)}`, LogLevel.ERROR)
+					return undefined
+				}
+			},
+			callback: async (feedback, context) => {
+				const desiredStatus = feedback.options.recording_status as string
+				const desiredTaskIndex = feedback.options.task_index as string
+		
+				if (!instance.constants.recordingTasks) {
+					return false
+				}
+				// Find the task with the matching index.
+				const task = instance.constants.recordingTasks.find((t: any) => t.index === desiredTaskIndex)
+				if (!task) {
+					return false
+				}
+				// Compare the task status with the desired status.
+				return task.status.toString() === desiredStatus
 			}
 		}
 	}
