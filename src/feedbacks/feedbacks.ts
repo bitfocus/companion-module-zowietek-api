@@ -23,7 +23,8 @@ export enum FeedbackId {
 	getOutputInfo = 'getOutputInfo',
 	getAudioConfig = 'getAudioConfig',
 	getDeviceTime = 'getDeviceTime',
-	getTally = 'getTally'
+	getTally = 'getTally',
+	getRecordingStatus = 'getRecordingStatus'
 }
 
 export function UpdateFeedbacks(instance: ZowietekInstance): void {
@@ -380,6 +381,42 @@ export function UpdateFeedbacks(instance: ZowietekInstance): void {
 				} else {
 					return false
 				}
+			}
+		},
+		[FeedbackId.getRecordingStatus]: {
+			name: 'Recording Status',
+			type: 'boolean',
+			description: 'Feedback based on the status of recording tasks (aggregated).',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(255, 0, 0)
+			},
+			showInvert: true,
+			options: [
+				{
+					id: 'recording_status',
+					type: 'dropdown',
+					label: 'Recording Status',
+					choices: [
+						{ id: '0', label: 'Not Recording' },
+						{ id: '1', label: 'Recording' },
+						{ id: '2', label: 'Recording Paused' },
+						{ id: '3', label: 'The storage device is full and cannot record' },
+						{ id: '4', label: 'Storage device is invalid/not mounted' },
+						{ id: '5', label: 'No signal source' }
+					],
+					default: '0'
+				}
+			],
+			callback: async (feedback, context) => {
+				const desiredStatus = feedback.options.recording_status as string;
+				if (!instance.constants.recordingTasks || instance.constants.recordingTasks.length === 0) {
+					return false;
+				}
+				// Check if any task has the desired status
+				return instance.constants.recordingTasks.some((task: any) => {
+					return task.status.toString() === desiredStatus;
+				});
 			}
 		}
 	}
